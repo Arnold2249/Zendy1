@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow - Daily Study Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        .task-item {
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .quote-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .weather-card {
+            background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%);
+        }
+        
+        .dragging {
+            opacity: 0.5;
+            background-color: #e2e8f0;
+        }
+        
+        .study-tag {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .break-tag {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .revision-tag {
+            background-color: #bee3f8;
+            color: #2c5282;
+        }
+        
+        /* Custom scrollbar */
+        .task-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .task-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .task-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        
+        .task-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header with weather -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-book-open text-indigo-600 mr-3"></i>
+                    Zendy
+                </h1>
+                <p class="text-gray-600">Your daily study companion</p>
+            </div>
+            
+            <div class="weather-card rounded-lg shadow-md p-4 text-white w-full md:w-auto">
+                <div class="flex items-center justify-between gap-5">
+                    <div>
+                        <div class="flex items-center">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <span id="city" class="font-semibold">Loading...</span>
+                        </div>
+                        <div id="date" class="text-sm opacity-90"></div>
+                    </div>
+                    <div class="flex items-center">
+                        <div id="weather-icon" class="text-4xl mr-3">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <div>
+                            <div id="temperature" class="text-2xl font-bold">--°C</div>
+                            <div id="weather-description" class="text-xs capitalize">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left column - Quote and stats -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Motivational quote -->
+                <div class="quote-container rounded-xl shadow-md p-6 text-white">
+                    <div class="flex items-start">
+                        <i class="fas fa-quote-left text-white opacity-50 text-2xl mr-3 mt-1"></i>
+                        <div>
+                            <p id="quote-text" class="text-lg font-medium">Loading motivational quote...</p>
+                            <p id="quote-author" class="text-right text-sm opacity-80 mt-2">- Author</p>
+                        </div>
+                    </div>
+                    <button id="new-quote-btn" class="mt-4 bg-white text-indigo-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition">
+                        <i class="fas fa-sync-alt mr-2"></i> New Quote
+                    </button>
+                </div>
+                
+                <!-- Stats -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-chart-pie text-indigo-600 mr-2"></i>
+                        Today's Progress
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Tasks Completed</span>
+                                <span id="completed-count">0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="completed-bar" class="bg-green-500 h-2 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Calendar -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calendar-alt text-indigo-600 mr-2"></i>
+                        Calendar
+                    </h3>
+                    <div class="flex justify-between items-center mb-2">
+                        <button id="prev-month" class="px-2 py-1 rounded hover:bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span id="calendar-month-title" class="font-semibold text-indigo-700"></span>
+                        <button id="next-month" class="px-2 py-1 rounded hover:bg-indigo-100 text-indigo-600">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div id="calendar-container"></div>
+                </div>
+                <script>
+                    // Calendar rendering with navigation
+                    let calendarDate = new Date();
+
+                    function renderCalendar() {
+                        const calendarContainer = document.getElementById('calendar-container');
+                        const monthTitle = document.getElementById('calendar-month-title');
+                        const now = new Date();
+                        const currentYear = calendarDate.getFullYear();
+                        const currentMonth = calendarDate.getMonth();
+                        const currentDate = now.getDate();
+                        const isCurrentMonth = now.getFullYear() === currentYear && now.getMonth() === currentMonth;
+
+                        const monthNames = [
+                            "January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"
+                        ];
+
+                        calendarContainer.innerHTML = '';
+
+                        // Month header
+                        monthTitle.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+                        // Days of week header
+                        const daysRow = document.createElement('div');
+                        daysRow.className = "grid grid-cols-7 text-xs text-gray-500 mb-1";
+                        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+                            const day = document.createElement('div');
+                            day.textContent = d;
+                            daysRow.appendChild(day);
+                        });
+                        calendarContainer.appendChild(daysRow);
+
+                        // Days grid
+                        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+                        const daysGrid = document.createElement('div');
+                        daysGrid.className = "grid grid-cols-7 gap-1";
+
+                        // Empty slots for first week
+                        for (let i = 0; i < firstDay; i++) {
+                            const emptyCell = document.createElement('div');
+                            emptyCell.innerHTML = '&nbsp;';
+                            daysGrid.appendChild(emptyCell);
+                        }
+
+                        // Days
+                        for (let d = 1; d <= daysInMonth; d++) {
+                            const dayCell = document.createElement('div');
+                            dayCell.textContent = d;
+                            dayCell.className = "flex items-center justify-center w-8 h-8 rounded-full cursor-pointer transition";
+                            if (isCurrentMonth && d === currentDate) {
+                                dayCell.className += " bg-indigo-600 text-white font-bold ring-2 ring-indigo-400";
+                            } else {
+                                dayCell.className += " hover:bg-indigo-100";
+                            }
+                            daysGrid.appendChild(dayCell);
+                        }
+
+                        calendarContainer.appendChild(daysGrid);
+                    }
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        renderCalendar();
+                        document.getElementById('prev-month').addEventListener('click', () => {
+                            calendarDate.setMonth(calendarDate.getMonth() - 1);
+                            renderCalendar();
+                        });
+                        document.getElementById('next-month').addEventListener('click', () => {
+                            calendarDate.setMonth(calendarDate.getMonth() + 1);
+                            renderCalendar();
+                        });
+                    });
+                </script>
+                
+                
+            </div>
+            
+            <!-- Right column - Tasks -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="font-semibold text-gray-800 text-xl flex items-center">
+                            <i class="fas fa-tasks text-indigo-600 mr-3"></i>
+                            Today's Study Plan
+                        </h2>
+                        
+                        <!-- Add task form -->
+                        <form id="task-form" class="mt-4 flex">
+                            <input 
+                                type="text" 
+                                id="task-input" 
+                                placeholder="Add a new task (e.g. 'Review Calculus Chapter 3')" 
+                                class="flex-1 border border-gray-300 rounded-l-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            >
+                            <div class="relative ml-2">
+                                <select id="task-type" class="appearance-none border border-gray-300 border-l-0 px-4 py-2 pr-8 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    <option value="study">Study</option>
+                                    <option value="revision">Revision</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <button type="submit" class="ml-2 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Task list -->
+                    <div class="task-list overflow-y-auto" style="max-height: 500px;">
+                        <ul id="task-list" class="divide-y divide-gray-200">
+                            <!-- Tasks will be added here dynamically -->
+                            <li class="p-4 text-center text-gray-500" id="empty-state">
+                                <i class="fas fa-clipboard-list text-3xl mb-2 text-gray-300"></i>
+                                <p>No tasks yet. Add your first task to get started!</p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const taskType = document.getElementById('task-type');
+        const taskList = document.getElementById('task-list');
+        const emptyState = document.getElementById('empty-state');
+        const quoteText = document.getElementById('quote-text');
+        const quoteAuthor = document.getElementById('quote-author');
+        const newQuoteBtn = document.getElementById('new-quote-btn');
+        const completedCount = document.getElementById('completed-count');
+        const completedBar = document.getElementById('completed-bar');
+        // const studyTime = document.getElementById('study-time');
+        // const studyBar = document.getElementById('study-bar');
+        // const pomodoroBtn = document.getElementById('pomodoro-btn');
+        // const shortBreakBtn = document.getElementById('short-break-btn');
+        // const timerDisplay = document.getElementById('timer-display');
+        const cityElement = document.getElementById('city');
+        const dateElement = document.getElementById('date');
+        const weatherIcon = document.getElementById('weather-icon');
+        const temperature = document.getElementById('temperature');
+        const weatherDescription = document.getElementById('weather-description');
+        
+        // State
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let completedTasks = JSON.parse(localStorage.getItem('completedTasks')) || 0;
+        let totalStudyTime = JSON.parse(localStorage.getItem('totalStudyTime')) || 0;
+        let timerInterval;
+        let isTimerRunning = false;
+        let currentTimer = 'pomodoro';
+        let timeLeft = 25 * 60;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Display current date
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateElement.textContent = now.toLocaleDateString('en-US', options);
+            
+            // Load tasks
+            renderTasks();
+            updateStats();
+            
+            // Load motivational quote
+            fetchMotivationalQuote();
+            
+            // Get weather
+            getWeather();
+            
+            // Initialize timer display
+            // updateTimerDisplay();
+        });
+        
+        // Task form submission
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const taskText = taskInput.value.trim();
+            if (taskText) {
+                const newTask = {
+                    id: Date.now(),
+                    text: taskText,
+                    type: taskType.value,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                tasks.push(newTask);
+                saveTasks();
+                renderTasks();
+                taskInput.value = '';
+                taskInput.focus();
+                
+                // Hide empty state if it's the first task
+                if (tasks.length === 1) {
+                    emptyState.style.display = 'none';
+                }
+            }
+        });
+        
+        // New quote button
+        newQuoteBtn.addEventListener('click', fetchMotivationalQuote);
+        
+        
+        // Render tasks
+        function renderTasks() {
+            if (tasks.length === 0) {
+                emptyState.style.display = 'block';
+                taskList.innerHTML = '';
+                taskList.appendChild(emptyState);
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            // Sort tasks: uncompleted first, then by creation time
+            const sortedTasks = [...tasks].sort((a, b) => {
+                if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                return new Date(a.createdAt) - new Date(b.createdAt);
+            });
+            
+            taskList.innerHTML = '';
+            
+            sortedTasks.forEach(task => {
+                const taskItem = document.createElement('li');
+                taskItem.className = `task-item p-4 hover:bg-gray-50 cursor-move ${task.completed ? 'bg-gray-50' : 'bg-white'}`;
+                taskItem.draggable = true;
+                taskItem.dataset.id = task.id;
+                
+                // Add drag events
+                taskItem.addEventListener('dragstart', handleDragStart);
+                taskItem.addEventListener('dragover', handleDragOver);
+                taskItem.addEventListener('dragleave', handleDragLeave);
+                taskItem.addEventListener('drop', handleDrop);
+                taskItem.addEventListener('dragend', handleDragEnd);
+                
+                taskItem.innerHTML = `
+                    <div class="flex items-start">
+                        <button class="complete-btn mr-3 mt-1 text-gray-400 hover:text-green-500 transition" data-id="${task.id}">
+                            <i class="fas fa-${task.completed ? 'check-circle text-green-500' : 'circle'}"></i>
+                        </button>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="${task.completed ? 'line-through text-gray-400' : 'text-gray-800'}">${task.text}</span>
+                                <div>
+                                    <span class="text-xs px-2 py-1 rounded-full ${getTagClass(task.type)}">${capitalizeFirstLetter(task.type)}</span>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                Added ${formatDate(task.createdAt)}
+                            </div>
+                        </div>
+                        <button class="delete-btn ml-3 text-gray-400 hover:text-red-500 transition" data-id="${task.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                taskList.appendChild(taskItem);
+            });
+            
+            // Add event listeners to buttons
+            document.querySelectorAll('.complete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const taskId = parseInt(btn.dataset.id);
+                    toggleTaskComplete(taskId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const taskId = parseInt(btn.dataset.id);
+                    deleteTask(taskId);
+                });
+            });
+        }
+        
+        // Toggle task completion
+        function toggleTaskComplete(taskId) {
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = !tasks[taskIndex].completed;
+                
+                if (tasks[taskIndex].completed) {
+                    completedTasks++;
+                    if (tasks[taskIndex].type === 'study') {
+                        totalStudyTime += 25; // Assuming each task is 25 minutes (Pomodoro)
+                    }
+                } else {
+                    completedTasks--;
+                    if (tasks[taskIndex].type === 'study') {
+                        totalStudyTime = Math.max(0, totalStudyTime - 25);
+                    }
+                }
+                
+                saveTasks();
+                saveStats();
+                renderTasks();
+                updateStats();
+            }
+        }
+        
+        // Delete task
+        function deleteTask(taskId) {
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                // If the task was completed, decrement the count
+                if (tasks[taskIndex].completed) {
+                    completedTasks--;
+                    if (tasks[taskIndex].type === 'study') {
+                        totalStudyTime = Math.max(0, totalStudyTime - 25);
+                    }
+                }
+                
+                tasks.splice(taskIndex, 1);
+                saveTasks();
+                saveStats();
+                renderTasks();
+                updateStats();
+            }
+        }
+        
+        // Save tasks to localStorage
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+        
+        // Save stats to localStorage
+        function saveStats() {
+            localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
+            localStorage.setItem('totalStudyTime', JSON.stringify(totalStudyTime));
+        }
+        
+        // Update stats display
+        function updateStats() {
+            completedCount.textContent = `${completedTasks} / ${tasks.length}`;
+            const completionPercentage = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
+            completedBar.style.width = `${completionPercentage}%`;
+            
+            // const hours = Math.floor(totalStudyTime / 60);
+            // const minutes = totalStudyTime % 60;
+            // studyTime.textContent = `${hours}h ${minutes}m`;
+            
+            // Assuming 8 hours is a full study day (480 minutes)
+            // const studyPercentage = Math.min((totalStudyTime / 480) * 100, 100);
+            // studyBar.style.width = `${studyPercentage}%`;
+        }
+        
+        // Fetch motivational quote
+        function fetchMotivationalQuote() {
+            quoteText.textContent = "Loading motivational quote...";
+            quoteAuthor.textContent = "- Author";
+            
+            // Using ZenQuotes API (free, no key needed)
+            fetch('https://zenquotes.io/api/random')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0 && data[0].q && data[0].a) {
+                        quoteText.textContent = data[0].q;
+                        quoteAuthor.textContent = `- ${data[0].a}`;
+                    } else {
+                        quoteText.textContent = "The expert in anything was once a beginner.";
+                        quoteAuthor.textContent = "- Helen Hayes";
+                    }
+                })
+                .catch(() => {
+                    // Fallback quotes if API fails
+                    const fallbackQuotes = [
+                        {
+                            q: "The secret of getting ahead is getting started.",
+                            a: "Mark Twain"
+                        },
+                        {
+                            q: "You don't have to be great to start, but you have to start to be great.",
+                            a: "Zig Ziglar"
+                        },
+                        {
+                            q: "Success is the sum of small efforts, repeated day in and day out.",
+                            a: "Robert Collier"
+                        }
+                    ];
+                    
+                    const randomQuote = fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)];
+                    quoteText.textContent = randomQuote.q;
+                    quoteAuthor.textContent = `- ${randomQuote.a}`;
+                });
+        }
+        
+        // Get weather
+        function getWeather() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const { latitude, longitude } = position.coords;
+                        
+                        // Using OpenWeatherMap API (you would need your own API key for production)
+                        // For demo purposes, we'll use a mock response
+                        mockWeatherResponse();
+                        
+                        // // In a real app, you would use:
+                        // fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=YOUR_API_KEY`)
+                        //     .then(response => response.json())
+                        //     .then(data => displayWeather(data))
+                        //     .catch(() => displayDefaultWeather());
+                    },
+                    () => {
+                        // If geolocation fails, use default weather
+                        displayDefaultWeather();
+                    }
+                );
+            } else {
+                // Browser doesn't support geolocation
+                displayDefaultWeather();
+            }
+        }
+        // (Removed unused timer and Pomodoro-related code for clarity)
+        function mockWeatherResponse() {
+            // Mock weather data for demo
+            const mockData = {
+                name: "New York",
+                weather: [{ description: "partly cloudy", icon: "03d" }],
+                main: { temp: 22 }
+            };
+            
+            displayWeather(mockData);
+        }
+        
+        function displayWeather(data) {
+            cityElement.textContent = data.name;
+            temperature.textContent = `${Math.round(data.main.temp)}°C`;
+            weatherDescription.textContent = data.weather[0].description;
+            
+            // Set weather icon (using Font Awesome as OpenWeatherMap requires their own icons)
+            const weatherCode = data.weather[0].icon;
+            let weatherIconClass = 'fas fa-sun';
+            
+            if (weatherCode.includes('01')) weatherIconClass = 'fas fa-sun'; // clear sky
+            else if (weatherCode.includes('02')) weatherIconClass = 'fas fa-cloud-sun'; // few clouds
+            else if (weatherCode.includes('03') || weatherCode.includes('04')) weatherIconClass = 'fas fa-cloud'; // scattered/broken clouds
+            else if (weatherCode.includes('09') || weatherCode.includes('10')) weatherIconClass = 'fas fa-cloud-rain'; // rain
+            else if (weatherCode.includes('11')) weatherIconClass = 'fas fa-bolt'; // thunderstorm
+            else if (weatherCode.includes('13')) weatherIconClass = 'fas fa-snowflake'; // snow
+            else if (weatherCode.includes('50')) weatherIconClass = 'fas fa-smog'; // mist
+            
+            weatherIcon.innerHTML = `<i class="${weatherIconClass}"></i>`;
+        }
+        
+        function displayDefaultWeather() {
+            cityElement.textContent = "Unknown Location";
+            temperature.textContent = "--°C";
+            weatherDescription.textContent = "--";
+            weatherIcon.innerHTML = '<i class="fas fa-question"></i>';
+        }
+
+        
+        // Drag and drop functions
+        let draggedItem = null;
+        
+        function handleDragStart(e) {
+            draggedItem = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.classList.add('dragging');
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            const boundingRect = this.getBoundingClientRect();
+            const offset = boundingRect.y + boundingRect.height / 2;
+            
+            if (e.clientY < offset) {
+                this.parentNode.insertBefore(draggedItem, this);
+            } else {
+                this.parentNode.insertBefore(draggedItem, this.nextSibling);
+            }
+        }
+        
+        function handleDragLeave() {
+            this.classList.remove('dragging');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('dragging');
+        }
+        
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            
+            // Get new order of tasks
+            const newTaskOrder = Array.from(taskList.children).map(item => parseInt(item.dataset.id));
+            
+            // Reorder tasks array
+            tasks.sort((a, b) => {
+                return newTaskOrder.indexOf(a.id) - newTaskOrder.indexOf(b.id);
+            });
+            
+            saveTasks();
+        }
+        
+        // Helper functions
+        function getTagClass(type) {
+            switch (type) {
+                case 'study': return 'study-tag';
+                case 'break': return 'break-tag';
+                case 'revision': return 'revision-tag';
+                default: return 'bg-gray-200 text-gray-800';
+            }
+        }
+        
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+        
+        function formatDate(dateString) {
+            const now = new Date();
+            const date = new Date(dateString);
+            const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+            
+            if (diffInMinutes < 1) return 'just now';
+            if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+            
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+            
+            const diffInDays = Math.floor(diffInHours / 24);
+            return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+        }
+    </script>
+</body>
+</html>
