@@ -141,8 +141,33 @@
                     </div>
                 </div>
 
-                
-    
+             <div id="current-time" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-lg shadow-md px-8 py-3 flex items-center font-mono text-2xl font-bold text-white tracking-widest border border-indigo-200">
+               <i class="fas fa-clock mr-3 text-white opacity-80"></i>
+               <span id="time-text"></span>
+            </div>
+            <script>
+                // Clock display logic
+                const formatTime = (date) => {
+                    // Try to get user's time zone, fallback to browser default
+                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+                    return date.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true,
+                        timeZone: timeZone
+                    });
+                };
+
+                function updateClock() {
+                    const now = new Date();
+                    document.getElementById('time-text').textContent = formatTime(now);
+                }
+                document.addEventListener('DOMContentLoaded', () => {
+                    updateClock();
+                    setInterval(updateClock, 1000);
+                });
+            </script>
                 
                 <!-- Calendar -->
                 <div class="bg-white rounded-xl shadow-md p-6">
