@@ -559,59 +559,63 @@
         // Get weather
         function getWeather() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const { latitude, longitude } = position.coords;
-                        
-                        // Using OpenWeatherMap API (you would need your own API key for production)
-                        // For demo purposes, we'll use a mock response
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                const { latitude, longitude } = position.coords;
+                // Replace 'YOUR_API_KEY' with your actual WeatherAPI key
+                fetch(`https://api.weatherapi.com/v1/current.json?key=3f189dd2e7204680a19184315252105&q=${latitude},${longitude}&aqi=no`)
+                    .then(response => response.json())
+                    .then(data => {
+                    if (data && data.current && data.location) {
+                        displayWeather(data);
+                    } else {
                         mockWeatherResponse();
-                        
-                        // // In a real app, you would use:
-                        // fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=YOUR_API_KEY`)
-                        //     .then(response => response.json())
-                        //     .then(data => displayWeather(data))
-                        //     .catch(() => displayDefaultWeather());
-                    },
-                    () => {
-                        // If geolocation fails, use default weather
-                        displayDefaultWeather();
                     }
-                );
-            } else {
-                // Browser doesn't support geolocation
+                    })
+                    .catch(() => {
+                    mockWeatherResponse();
+                    });
+                },
+                () => {
                 displayDefaultWeather();
+                }
+            );
+            } else {
+            displayDefaultWeather();
             }
         }
         // (Removed unused timer and Pomodoro-related code for clarity)
         function mockWeatherResponse() {
-            // Mock weather data for demo
+            // Mock weather data for demo (WeatherAPI format)
             const mockData = {
-                name: "New York",
-                weather: [{ description: "partly cloudy", icon: "03d" }],
-                main: { temp: 22 }
+                location: { name: "New York" },
+                current: {
+                    temp_c: 22,
+                    condition: { text: "Partly cloudy", code: 1003 }
+                }
             };
-            
             displayWeather(mockData);
         }
-        
+
         function displayWeather(data) {
-            cityElement.textContent = data.name;
-            temperature.textContent = `${Math.round(data.main.temp)}°C`;
-            weatherDescription.textContent = data.weather[0].description;
-            
-            // Set weather icon (using Font Awesome as OpenWeatherMap requires their own icons)
-            const weatherCode = data.weather[0].icon;
+            // WeatherAPI response handling
+            cityElement.textContent = data.location.name;
+            temperature.textContent = `${Math.round(data.current.temp_c)}°C`;
+            weatherDescription.textContent = data.current.condition.text;
+
+            // Map WeatherAPI condition codes to Font Awesome icons
+            const code = data.current.condition.code;
             let weatherIconClass = 'fas fa-sun';
-            
-            if (weatherCode.includes('01')) weatherIconClass = 'fas fa-sun'; // clear sky
-            else if (weatherCode.includes('02')) weatherIconClass = 'fas fa-cloud-sun'; // few clouds
-            else if (weatherCode.includes('03') || weatherCode.includes('04')) weatherIconClass = 'fas fa-cloud'; // scattered/broken clouds
-            else if (weatherCode.includes('09') || weatherCode.includes('10')) weatherIconClass = 'fas fa-cloud-rain'; // rain
-            else if (weatherCode.includes('11')) weatherIconClass = 'fas fa-bolt'; // thunderstorm
-            else if (weatherCode.includes('13')) weatherIconClass = 'fas fa-snowflake'; // snow
-            else if (weatherCode.includes('50')) weatherIconClass = 'fas fa-smog'; // mist
-            
+
+            // Basic mapping for demo purposes
+            if ([1000].includes(code)) weatherIconClass = 'fas fa-sun'; // Sunny
+            else if ([1003, 1006].includes(code)) weatherIconClass = 'fas fa-cloud-sun'; // Partly cloudy
+            else if ([1009].includes(code)) weatherIconClass = 'fas fa-cloud'; // Cloudy
+            else if ([1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(code)) weatherIconClass = 'fas fa-cloud-rain'; // Rain
+            else if ([1087, 1273, 1276, 1279, 1282].includes(code)) weatherIconClass = 'fas fa-bolt'; // Thunder
+            else if ([1066, 1069, 1072, 1114, 1117, 1210, 1213, 1216, 1219, 1222, 1225, 1255, 1258, 1261, 1264].includes(code)) weatherIconClass = 'fas fa-snowflake'; // Snow
+            else if ([1030, 1135, 1147].includes(code)) weatherIconClass = 'fas fa-smog'; // Mist/Fog
+
             weatherIcon.innerHTML = `<i class="${weatherIconClass}"></i>`;
         }
         
